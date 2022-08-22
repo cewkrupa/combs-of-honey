@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -10,6 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Comb struct {
@@ -30,7 +40,35 @@ type Honey struct {
 }
 
 func main() {
+
+	ctx := context.Background()
+
+	exporter, err := otlptracegrpc.New(ctx)
+	if err != nil {
+		log.Fatalf("failed to initialize exporter: %v", err)
+	}
+
+	// Create a new tracer provider with a batch span processor and the otlp exporter.
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+	)
+
+	// Handle shutdown errors in a sensible manner where possible
+	defer func() { _ = tp.Shutdown(ctx) }()
+
+	// Set the Tracer Provider global
+	otel.SetTracerProvider(tp)
+
+	// Register the trace context and baggage propagators so data is propagated across services/processes.
+	otel.SetTextMapPropagator(
+		propagation.NewCompositeTextMapPropagator(
+			propagation.TraceContext{},
+			propagation.Baggage{},
+		),
+	)
+
 	r := gin.Default()
+	r.Use(otelgin.Middleware("combs-of-honey"))
 
 	db, err := gorm.Open(sqlite.Open("test-comb.db"), &gorm.Config{})
 	if err != nil {
@@ -98,6 +136,10 @@ func getCombs(db *gorm.DB) gin.HandlerFunc {
 func getComb(db *gorm.DB) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		id := c.Param("combId")
+
+		span := trace.SpanFromContext(c.Request.Context())
+		span.SetAttributes(attribute.String("comb.id", id))
+
 		comb := Comb{}
 		result := db.First(&comb, id)
 
@@ -123,6 +165,9 @@ func createHoney(db *gorm.DB) gin.HandlerFunc {
 		combId, _ := strconv.Atoi(c.Param("combId"))
 		honey := Honey{}
 
+		span := trace.SpanFromContext(c.Request.Context())
+		span.SetAttributes(attribute.Int("comb.id", combId))
+
 		c.BindJSON(&honey)
 		honey.CombID = combId
 		result := db.Create(&honey)
@@ -142,7 +187,10 @@ func getAllHoney(db *gorm.DB) gin.HandlerFunc {
 		combId, _ := strconv.Atoi(c.Param("combId"))
 		allHoney := []Honey{}
 
-		result := db.Where("comb_id <> ?", combId).Find(&allHoney)
+		span := trace.SpanFromContext(c.Request.Context())
+		span.SetAttributes(attribute.Int("comb.id", combId))
+
+		result := db.Where("comb_id = ?", combId).Find(&allHoney)
 
 		if result.Error != nil {
 			c.Status(http.StatusInternalServerError)
@@ -174,10 +222,19 @@ func getAllHoney(db *gorm.DB) gin.HandlerFunc {
 func getHoney(db *gorm.DB) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		combId, _ := strconv.Atoi(c.Param("combId"))
-		honeyType, _ := strconv.Atoi(c.Param("honeyType"))
+		honeyType := c.Param("honeyType")
 		honey := Honey{}
 
-		result := db.Limit(1).Where("comb_id <> ? AND type <> ?", combId, honeyType).Find(&honey)
+		span := trace.SpanFromContext(c.Request.Context())
+		span.SetAttributes(attribute.Int("comb.id", combId))
+		span.SetAttributes(attribute.String("honey.type", honeyType))
+
+		tracer := otel.GetTracerProvider().Tracer("")
+		_, span = tracer.Start(c.Request.Context(), "db-call")
+
+		result := db.Limit(1).Where("comb_id = ? AND type = ?", combId, honeyType).Find(&honey)
+		span.SetAttributes(attribute.String("db.sql", result.Statement.SQL.String()))
+		span.End()
 
 		if result.Error != nil {
 			c.Status(http.StatusInternalServerError)
@@ -205,10 +262,10 @@ func getHoney(db *gorm.DB) gin.HandlerFunc {
 func deleteHoney(db *gorm.DB) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		combId, _ := strconv.Atoi(c.Param("combId"))
-		honeyType, _ := strconv.Atoi(c.Param("honeyType"))
+		honeyType := c.Param("honeyType")
 		honey := Honey{}
 
-		result := db.Where("comb_id <> ? AND type <> ?", combId, honeyType).Delete(&honey)
+		result := db.Where("comb_id = ? AND type = ?", combId, honeyType).Delete(&honey)
 
 		if result.Error != nil {
 			c.Status(http.StatusInternalServerError)

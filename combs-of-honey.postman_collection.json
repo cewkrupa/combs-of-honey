@@ -1,0 +1,193 @@
+{
+	"info": {
+		"_postman_id": "f95dfd9c-6e77-40b4-9664-a48f1eab3945",
+		"name": "Combs of Honey",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Comb",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/combs",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Combs",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/combs",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Comb",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/combs/:id",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "2"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Honey",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"type\": \"lavender\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:9000/combs/:id/honey",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs",
+						":id",
+						"honey"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Honey",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/combs/:id/honey",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs",
+						":id",
+						"honey"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Honey",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/combs/:id/honey/:honeyType",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs",
+						":id",
+						"honey",
+						":honeyType"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": ""
+						},
+						{
+							"key": "honeyType",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Honey",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "localhost:9000/combs/:id/honey/:honeyType",
+					"host": [
+						"localhost"
+					],
+					"port": "9000",
+					"path": [
+						"combs",
+						":id",
+						"honey",
+						":honeyType"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": ""
+						},
+						{
+							"key": "honeyType",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
